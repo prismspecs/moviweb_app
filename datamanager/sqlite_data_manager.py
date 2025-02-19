@@ -37,21 +37,18 @@ class SQLiteDataManager(DataManagerInterface):
             conn.commit()
 
     def list_all_users(self):
-        """Retrieve all users."""
         with self._connect() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM users")
             return cursor.fetchall()
 
     def get_user_movies(self, user_id):
-        """Retrieve movies for a specific user."""
         with self._connect() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM movies WHERE user_id = ?", (user_id,))
             return cursor.fetchall()
 
     def add_user(self, name):
-        """Add a new user."""
         with self._connect() as conn:
             cursor = conn.cursor()
             cursor.execute("INSERT INTO users (name) VALUES (?)", (name,))
@@ -59,7 +56,6 @@ class SQLiteDataManager(DataManagerInterface):
             return cursor.lastrowid
 
     def add_movie(self, user_id, name, director, year, rating):
-        """Add a new movie for a user."""
         with self._connect() as conn:
             cursor = conn.cursor()
             cursor.execute("""
@@ -69,7 +65,6 @@ class SQLiteDataManager(DataManagerInterface):
             conn.commit()
 
     def update_movie(self, movie_id, name, director, year, rating):
-        """Update a movie's details."""
         with self._connect() as conn:
             cursor = conn.cursor()
             cursor.execute("""
@@ -80,7 +75,6 @@ class SQLiteDataManager(DataManagerInterface):
             conn.commit()
 
     def delete_movie(self, movie_id):
-        """Delete a movie."""
         with self._connect() as conn:
             cursor = conn.cursor()
             cursor.execute("DELETE FROM movies WHERE id = ?", (movie_id,))
