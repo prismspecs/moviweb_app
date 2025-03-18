@@ -51,6 +51,14 @@ class SQLiteDataManager(DataManagerInterface):
     def add_user(self, name):
         with self._connect() as conn:
             cursor = conn.cursor()
+
+            # Check if user already exists
+            cursor.execute("SELECT id FROM users WHERE name = ?", (name,))
+            existing_user = cursor.fetchone()
+            if existing_user:
+                return existing_user[0]  # Return existing user's ID instead of inserting again
+
+            # Insert new user if not found
             cursor.execute("INSERT INTO users (name) VALUES (?)", (name,))
             conn.commit()
             return cursor.lastrowid
@@ -79,3 +87,10 @@ class SQLiteDataManager(DataManagerInterface):
             cursor = conn.cursor()
             cursor.execute("DELETE FROM movies WHERE id = ?", (movie_id,))
             conn.commit()
+
+    def get_movie_by_id(self, movie_id):
+        """Retrieve a movie by its ID."""
+        with self._connect() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM movies WHERE id = ?", (movie_id,))
+            return cursor.fetchone()

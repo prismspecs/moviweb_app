@@ -1,10 +1,15 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from datamanager.sqlite_data_manager import SQLiteDataManager
 from api.api_routes import api
+import requests
+import os
 
 app = Flask(__name__)
 app.register_blueprint(api, url_prefix='/api')
 data_manager = SQLiteDataManager()
+
+OMDB_API_KEY = os.getenv("OMDB_API_KEY", "your_api_key_here")
+OMDB_URL = "http://www.omdbapi.com/"
 
 @app.route('/')
 def home():
@@ -30,12 +35,48 @@ def add_user():
 @app.route('/users/<int:user_id>/add_movie', methods=['POST'])
 def add_movie(user_id):
     name = request.form.get("name")
-    director = request.form.get("director")
-    year = request.form.get("year")
-    rating = request.form.get("rating")
-    if name:
-        data_manager.add_movie(user_id, name, director, year, rating)
+    if not name:
+        flash("Movie name is required!", "error")
+        return redirect(url_for("user_movies", user_id=user_id))
+
+    # Fetch movie details from OMDb
+    params = {"t": name, "apikey": OMDB_API_KEY}
+    response = requests.get(OMDB_URL, params=params)
+    movie_data = response.json()
+
+    if movie_data.get("Response") == "True":
+        director = movie_data.get("Director", "Unknown")
+        year = movie_data.get("Year", None)
+        rating = movie_data.get("imdbRating", None)
+    else:
+        flash("Movie not found in OMDb, adding with provided details.", "warning")
+        director = request.form.get("director", "Unknown")
+        year = request.form.get("year", None)
+        rating = request.form.get("rating", None)
+
+    data_manager.add_movie(user_id, name, director, year, rating)
+    flash("Movie added successfully!", "success")
     return redirect(url_for("user_movies", user_id=user_id))
+
+@app.route('/users/<int:user_id>/update_movie/<int:movie_id>', methods=['GET', 'POST'])
+def update_movie(user_id, movie_id):
+    movie = data_manager.get_movie_by_id(movie_id)
+    if not movie:
+        flash("Movie not found!", "error")
+        return redirect(url_for("user_movies", user_id=user_id))
+
+    if request.method == 'POST':
+        name = request.form.get("name", movie[2])
+        director = request.form.get("director", movie[3])
+        year = request.form.get("year", movie[4])
+        rating = request.form.get("rating", movie[5])
+        
+        data_manager.update_movie(movie_id, name, director, year, rating)
+        flash("Movie updated successfully!", "success")
+        return redirect(url_for("user_movies", user_id=user_id))
+
+    return render_template("update_movie.html", movie=movie, user_id=user_id)
+
 
 @app.route('/populate_db')
 def populate_db():
